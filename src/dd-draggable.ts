@@ -40,7 +40,7 @@ interface GridStackNodeRotate extends GridStackNode {
 type DDDragEvent = 'drag' | 'dragstart' | 'dragstop';
 
 // make sure we are not clicking on known object that handles mouseDown
-const skipMouseDown = 'input,textarea,button,select,option,[contenteditable="true"],.ui-resizable-handle';
+const skipMouseDown = 'input,textarea,button,select,option, [contenteditable="true"]>*:not([contenteditable="false"]),.ui-resizable-handle';
 
 // let count = 0; // TEST
 
@@ -79,9 +79,8 @@ export class DDDraggable extends DDBaseImplement implements HTMLElementExtendOpt
     super();
 
     // get the element that is actually supposed to be dragged by
-    const handleName = option.handle.substring(1);
     const n = el.gridstackNode;
-    this.dragEls = el.classList.contains(handleName) ? [el] : (n?.subGrid ? [el.querySelector(option.handle) || el] : Array.from(el.querySelectorAll(option.handle)));
+    this.dragEls = el.matches(option.handle) ? [el] : (n?.subGrid ? [el.querySelector(option.handle) || el] : Array.from(el.querySelectorAll(option.handle)));
     if (this.dragEls.length === 0) {
       this.dragEls = [el];
     }
@@ -150,19 +149,18 @@ export class DDDraggable extends DDBaseImplement implements HTMLElementExtendOpt
     if (DDManager.mouseHandled) return;
     if (e.button !== 0) return true; // only left click
 
-    // make sure we are not clicking on known object that handles mouseDown, or ones supplied by the user
-    if (!this.dragEls.find(el => el === e.target) && (e.target as HTMLElement).closest(skipMouseDown)) return true;
-    if (this.option.cancel) {
-      if ((e.target as HTMLElement).closest(this.option.cancel)) return true;
-    }
-
-    // REMOVE: why would we get the event if it wasn't for us or child ?
     // make sure we are clicking on a drag handle or child of it...
     // Note: we don't need to check that's handle is an immediate child, as mouseHandled will prevent parents from also handling it (lowest wins)
-    // let className = this.option.handle.substring(1);
-    // let el = e.target as HTMLElement;
-    // while (el && !el.classList.contains(className)) { el = el.parentElement; }
-    // if (!el) return;
+    let element = e.target  as HTMLElement;
+    while (element && !element.matches(this.option.handle)) { element = element.parentElement; }
+    if (!element) return;
+    // make sure we are not clicking on known object that handles mouseDown, or ones supplied by the user
+    if ((e.target as HTMLElement).closest(skipMouseDown))
+      return true;
+    if (this.option.cancel) {
+      if ((e.target as HTMLElement).closest(this.option.cancel))
+        return true;
+    }
 
     this.mouseDownEvent = e;
     delete this.dragging;
